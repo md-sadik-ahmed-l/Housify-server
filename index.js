@@ -76,7 +76,18 @@ async function run() {
     });
 
 
-    
+    app.post("/api/property", async (req, res) => {
+      const property = req.body;
+      const result = await propertiesCollection.insertOne(property);
+      res.send(result);
+    });
+
+
+    app.post("/api/bookings/create", async (req, res) => {
+      const bookingDetails = req.body;
+      const result = await bookingDetailsCollection.insertOne(bookingDetails);
+      res.send(result);
+    });
 
 
     
