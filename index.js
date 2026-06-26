@@ -108,11 +108,11 @@ async function run() {
       res.send(result);
     });
 
-    app.post("/api/add/favorites", async (req, res) => {
-      const favorite = req.body;
-      const result = await favoritesCollection.insertOne(favorite);
-      res.send(result);
-    });
+    // app.post("/api/add/favorites", async (req, res) => {
+    //   const favorite = req.body;
+    //   const result = await favoritesCollection.insertOne(favorite);
+    //   res.send(result);
+    // });
 
     app.get("/api/favorites/check", async (req, res) => {
       const { tenantUserId, propertyId } = req.query;
@@ -127,33 +127,57 @@ async function run() {
       });
     });
 
-    // app.post("/api/add/favorites", async (req, res) => {
-    //   const favorite = req.body;
+    app.post("/api/add/favorites", async (req, res) => {
+      const favorite = req.body;
 
-    //   const exists = await favoritesCollection.findOne({
-    //     tenantUserId: favorite.tenantUserId,
-    //     propertyId: favorite.propertyId,
-    //   });
+      const exists = await favoritesCollection.findOne({
+        tenantUserId: favorite.tenantUserId,
+        propertyId: favorite.propertyId,
+      });
 
-    //   if (exists) {
-    //     return res.status(409).send({
-    //       success: false,
-    //       message: "Already added",
-    //     });
-    //   }
+      if (exists) {
+        return res.status(409).send({
+          success: false,
+          message: "Already added",
+        });
+      }
 
-    //   const result = await favoritesCollection.insertOne(favorite);
+      const result = await favoritesCollection.insertOne(favorite);
 
-    //   res.send({
-    //     success: true,
-    //     insertedId: result.insertedId,
-    //   });
-    // });
+      res.send({
+        success: true,
+        insertedId: result.insertedId,
+      });
+    });
 
     app.post("/api/bookings/create", async (req, res) => {
       const bookingDetails = req.body;
       const result = await bookingDetailsCollection.insertOne(bookingDetails);
       res.send(result);
+    });
+
+    // Express server এ এই route যোগ করুন
+    app.delete("/api/favorites/remove", async (req, res) => {
+      const { tenantUserId, propertyId } = req.query;
+
+      if (!tenantUserId || !propertyId) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Missing params" });
+      }
+
+      const result = await favoritesCollection.deleteOne({
+        tenantUserId,
+        propertyId,
+      });
+
+      if (result.deletedCount === 0) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Favorite not found" });
+      }
+
+      res.json({ success: true, message: "Removed from favorites" });
     });
 
     // Send a ping to confirm a successful connection
