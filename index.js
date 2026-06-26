@@ -32,7 +32,8 @@ async function run() {
 
     const database = client.db("housify");
     const propertiesCollection = database.collection("all_properties");
-    const bookingDetailsCollection = database.collection("booking_details")
+    const bookingDetailsCollection = database.collection("booking_details");
+    const favoritesCollection = database.collection("favorites");
 
     app.get("/api/all-properties", async (req, res) => {
       const result = await propertiesCollection.find().toArray();
@@ -48,6 +49,33 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/api/favorite/properties", async (req, res) => {
+      const { tenantUserId } = req.query;
+
+      const result = await favoritesCollection
+        .find({ tenantUserId: tenantUserId })
+        .toArray();
+
+      res.send(result);
+    });
+
+    app.get("/api/owner-booking/properties", async (req, res) => {
+      const { ownerId } = req.query;
+
+      const result = await bookingDetailsCollection
+        .find({ ownerId: ownerId })
+        .toArray();
+      res.send(result);
+    });
+
+    app.get("/api/tenant-booking/properties", async (req, res) => {
+      const { userId } = req.query;
+
+      const result = await bookingDetailsCollection
+        .find({ userId: userId })
+        .toArray();
+      res.send(result);
+    });
 
     // app.get('/api/property/:id', async(req, res) => {
     //   const id = req.params;
@@ -55,7 +83,6 @@ async function run() {
     //   const result = await propertiesCollection.findOne(id);
     //   res.send(result);
     // })
-
 
     app.get("/api/property/:id", async (req, res) => {
       try {
@@ -75,22 +102,59 @@ async function run() {
       }
     });
 
-
     app.post("/api/property", async (req, res) => {
       const property = req.body;
       const result = await propertiesCollection.insertOne(property);
       res.send(result);
     });
 
+    app.post("/api/add/favorites", async (req, res) => {
+      const favorite = req.body;
+      const result = await favoritesCollection.insertOne(favorite);
+      res.send(result);
+    });
+
+    app.get("/api/favorites/check", async (req, res) => {
+      const { tenantUserId, propertyId } = req.query;
+
+      const favorite = await favoritesCollection.findOne({
+        tenantUserId,
+        propertyId,
+      });
+
+      res.send({
+        isFavorite: !!favorite,
+      });
+    });
+
+    // app.post("/api/add/favorites", async (req, res) => {
+    //   const favorite = req.body;
+
+    //   const exists = await favoritesCollection.findOne({
+    //     tenantUserId: favorite.tenantUserId,
+    //     propertyId: favorite.propertyId,
+    //   });
+
+    //   if (exists) {
+    //     return res.status(409).send({
+    //       success: false,
+    //       message: "Already added",
+    //     });
+    //   }
+
+    //   const result = await favoritesCollection.insertOne(favorite);
+
+    //   res.send({
+    //     success: true,
+    //     insertedId: result.insertedId,
+    //   });
+    // });
 
     app.post("/api/bookings/create", async (req, res) => {
       const bookingDetails = req.body;
       const result = await bookingDetailsCollection.insertOne(bookingDetails);
       res.send(result);
     });
-
-
-    
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
