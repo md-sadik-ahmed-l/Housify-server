@@ -35,9 +35,31 @@ async function run() {
     const bookingDetailsCollection = database.collection("booking_details");
     const favoritesCollection = database.collection("favorites");
 
+    // app.get("/api/all-properties", async (req, res) => {
+    //   const result = await propertiesCollection.find().toArray();
+    //   res.send(result);
+    // });
+
     app.get("/api/all-properties", async (req, res) => {
-      const result = await propertiesCollection.find().toArray();
-      res.send(result);
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 6;
+
+      const skip = (page - 1) * limit;
+
+      const total = await propertiesCollection.countDocuments();
+
+      const properties = await propertiesCollection
+        .find()
+        .skip(skip)
+        .limit(limit)
+        .toArray();
+
+      res.send({
+        data: properties,
+        total,
+        totalPages: Math.ceil(total / limit),
+        currentPage: page,
+      });
     });
 
     app.get("/api/properties", async (req, res) => {
