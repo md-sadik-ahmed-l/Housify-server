@@ -60,6 +60,24 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/api/featured-properties", async (req, res) => {
+      try {
+        const properties = await propertiesCollection
+          .find({
+            status: "approved", // approved properties only
+          })
+          .limit(6)
+          .toArray();
+
+        res.send(properties);
+      } catch (error) {
+        res.status(500).send({
+          success: false,
+          message: error.message,
+        });
+      }
+    });
+
     app.get("/api/all-properties", async (req, res) => {
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 6;
@@ -113,6 +131,9 @@ async function run() {
       res.send(result);
     });
 
+    // Owner Bookings api
+    // Owner Bookings api
+
     app.get("/api/owner-booking/properties", async (req, res) => {
       const { ownerId } = req.query;
 
@@ -120,6 +141,91 @@ async function run() {
         .find({ ownerId: ownerId })
         .toArray();
       res.send(result);
+    });
+
+    app.patch("/api/bookings/:id/approve", async (req, res) => {
+      try {
+        const { id } = req.params;
+
+        const booking = await bookingDetailsCollection.findOne({
+          _id: new ObjectId(id),
+        });
+
+        if (!booking) {
+          return res.status(404).json({
+            success: false,
+            message: "Booking not found",
+          });
+        }
+
+        await bookingDetailsCollection.updateMany(
+          {
+            propertyId: booking.propertyId,
+            _id: { $ne: new ObjectId(id) },
+            status: "pending",
+          },
+          {
+            $set: {
+              status: "rejected",
+            },
+          },
+        );
+
+        await bookingDetailsCollection.updateOne(
+          {
+            _id: new ObjectId(id),
+          },
+          {
+            $set: {
+              status: "approved",
+            },
+          },
+        );
+
+        res.json({
+          success: true,
+          message: "Booking approved successfully.",
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          message: error.message,
+        });
+      }
+    });
+
+    app.patch("/api/bookings/:id/reject", async (req, res) => {
+      try {
+        const { id } = req.params;
+
+        const result = await bookingDetailsCollection.updateOne(
+          {
+            _id: new ObjectId(id),
+          },
+          {
+            $set: {
+              status: "rejected",
+            },
+          },
+        );
+
+        if (!result.matchedCount) {
+          return res.status(404).json({
+            success: false,
+            message: "Booking not found",
+          });
+        }
+
+        res.json({
+          success: true,
+          message: "Booking rejected successfully.",
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          message: error.message,
+        });
+      }
     });
 
     app.get("/api/tenant-booking/properties", async (req, res) => {
@@ -191,13 +297,67 @@ async function run() {
       });
     });
 
-    app.post("/api/bookings/create", async (req, res) => {
-      const bookingDetails = req.body;
-      const result = await bookingDetailsCollection.insertOne(bookingDetails);
-      res.send(result);
+    // bookings api
+    // bookings api
+    // bookings api
+
+    app.get("/api/bookings/check", async (req, res) => {
+      try {
+        const { userId, propertyId } = req.query;
+
+        const booking = await bookingDetailsCollection.findOne({
+          userId,
+          propertyId,
+        });
+
+        res.json({
+          booked: !!booking,
+        });
+      } catch (err) {
+        res.status(500).json({
+          booked: false,
+        });
+      }
     });
 
-   
+    // app.post("/api/bookings/create", async (req, res) => {
+    //   const bookingDetails = req.body;
+    //   const result = await bookingDetailsCollection.insertOne(bookingDetails);
+    //   res.send(result);
+    // });
+
+    app.post("/api/bookings/create", async (req, res) => {
+      try {
+        const bookingDetails = req.body;
+
+        const { userId, propertyId } = bookingDetails;
+
+        // একই user আগে এই property book করেছে কিনা
+        const alreadyBooked = await bookingDetailsCollection.findOne({
+          userId,
+          propertyId,
+        });
+
+        if (alreadyBooked) {
+          return res.status(409).json({
+            success: false,
+            message: "You have already booked this property.",
+          });
+        }
+
+        const result = await bookingDetailsCollection.insertOne(bookingDetails);
+
+        res.json({
+          success: true,
+          insertedId: result.insertedId,
+        });
+      } catch (err) {
+        res.status(500).json({
+          success: false,
+          message: err.message,
+        });
+      }
+    });
 
     // Express server এ এই route যোগ করুন
     app.delete("/api/favorites/remove", async (req, res) => {
@@ -223,6 +383,64 @@ async function run() {
       res.json({ success: true, message: "Removed from favorites" });
     });
 
+    // admin api
+    // admin api
+
+    app.get("/api/users", async (req, res) => {
+      try {
+        const users = await usersCollection.find().toArray();
+
+        res.send(users);
+      } catch (error) {
+        res.status(500).send({
+          success: false,
+          message: error.message,
+        });
+      }
+    });
+
+    app.patch("/api/users/:id/role", async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { role } = req.body;
+
+        if (!["tenant", "owner", "admin"].includes(role)) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid role",
+          });
+        }
+
+        const result = await usersCollection.updateOne(
+          {
+            _id: new ObjectId(id),
+          },
+          {
+            $set: {
+              role,
+            },
+          },
+        );
+
+        if (!result.matchedCount) {
+          return res.status(404).json({
+            success: false,
+            message: "User not found",
+          });
+        }
+
+        res.json({
+          success: true,
+          message: "Role updated successfully",
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          message: error.message,
+        });
+      }
+    });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
@@ -233,6 +451,7 @@ async function run() {
     // await client.close();
   }
 }
+
 run().catch(console.dir);
 
 app.listen(port, () => {
