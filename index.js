@@ -441,6 +441,136 @@ async function run() {
       }
     });
 
+    app.get("/properties", async (req, res) => {
+      try {
+        const properties = await propertiesCollection
+          .find({})
+          .sort({ createdAt: -1 })
+          .toArray();
+
+        res.status(200).send(properties);
+      } catch (error) {
+        console.error(error);
+
+        res.status(500).send({
+          success: false,
+          message: "Failed to fetch properties",
+        });
+      }
+    });
+
+    // ==========================================
+    // Approve Property
+    // PATCH /api/admin/properties/:id/approve
+    // ==========================================
+    app.patch("/properties/:id/approve", async (req, res) => {
+      try {
+        const { id } = req.params;
+
+        const result = await propertiesCollection.updateOne(
+          { _id: new ObjectId(id) },
+          {
+            $set: {
+              status: "Approved",
+              rejectionFeedback: "",
+            },
+          },
+        );
+
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+
+        res.status(500).send({
+          success: false,
+          message: "Failed to approve property",
+        });
+      }
+    });
+
+    // ==========================================
+    // Reject Property
+    // PATCH /api/admin/properties/:id/reject
+    // ==========================================
+    app.patch("/properties/:id/reject", async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { rejectionFeedback } = req.body;
+
+        const result = await propertiesCollection.updateOne(
+          { _id: new ObjectId(id) },
+          {
+            $set: {
+              status: "Rejected",
+              rejectionFeedback,
+            },
+          },
+        );
+
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+
+        res.status(500).send({
+          success: false,
+          message: "Failed to reject property",
+        });
+      }
+    });
+
+    // ==========================================
+    // Update Property
+    // PUT /api/admin/properties/:id
+    // ==========================================
+    app.put("/admin/properties/:id", async (req, res) => {
+      try {
+        const { id } = req.params;
+
+        const updatedData = req.body;
+
+        delete updatedData._id;
+
+        const result = await propertiesCollection.updateOne(
+          { _id: new ObjectId(id) },
+          {
+            $set: updatedData,
+          },
+        );
+
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+
+        res.status(500).send({
+          success: false,
+          message: "Failed to update property",
+        });
+      }
+    });
+
+    // ==========================================
+    // Delete Property
+    // DELETE /api/admin/properties/:id
+    // ==========================================
+    app.delete("/properties/:id", async (req, res) => {
+      try {
+        const { id } = req.params;
+
+        const result = await propertiesCollection.deleteOne({
+          _id: new ObjectId(id),
+        });
+
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+
+        res.status(500).send({
+          success: false,
+          message: "Failed to delete property",
+        });
+      }
+    });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
