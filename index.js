@@ -34,22 +34,63 @@ async function run() {
     const propertiesCollection = database.collection("all_properties");
     const bookingDetailsCollection = database.collection("booking_details");
     const favoritesCollection = database.collection("favorites");
+    const usersCollection = database.collection("user");
 
-    // app.get("/api/all-properties", async (req, res) => {
-    //   const result = await propertiesCollection.find().toArray();
-    //   res.send(result);
-    // });
+    app.get("/api/properties", async (req, res) => {
+      const { userId } = req.query;
+
+      const result = await propertiesCollection
+        .find({ userId: userId })
+        .toArray();
+      res.send(result);
+    });
+
+    app.get("/api/profile/all-properties", async (req, res) => {
+      const result = await propertiesCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.get("/api/total/users", async (req, res) => {
+      const result = await usersCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.get("/api/total/bookings", async (req, res) => {
+      const result = await bookingDetailsCollection.find().toArray();
+      res.send(result);
+    });
 
     app.get("/api/all-properties", async (req, res) => {
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 6;
-
       const skip = (page - 1) * limit;
 
-      const total = await propertiesCollection.countDocuments();
+      const search = req.query.search || "";
+      const propertyType = req.query.propertyType || "";
+      const sortOrder = req.query.sort || "";
+
+      const filter = {};
+
+      if (search) {
+        filter.$or = [
+          { title: { $regex: search, $options: "i" } },
+          { location: { $regex: search, $options: "i" } },
+        ];
+      }
+
+      if (propertyType && propertyType !== "all") {
+        filter.propertyType = propertyType;
+      }
+
+      let sortOption = {};
+      if (sortOrder === "lowToHigh") sortOption.price = 1;
+      if (sortOrder === "highToLow") sortOption.price = -1;
+
+      const total = await propertiesCollection.countDocuments(filter);
 
       const properties = await propertiesCollection
-        .find()
+        .find(filter)
+        .sort(sortOption)
         .skip(skip)
         .limit(limit)
         .toArray();
@@ -60,15 +101,6 @@ async function run() {
         totalPages: Math.ceil(total / limit),
         currentPage: page,
       });
-    });
-
-    app.get("/api/properties", async (req, res) => {
-      const { userId } = req.query;
-
-      const result = await propertiesCollection
-        .find({ userId: userId })
-        .toArray();
-      res.send(result);
     });
 
     app.get("/api/favorite/properties", async (req, res) => {
@@ -99,13 +131,6 @@ async function run() {
       res.send(result);
     });
 
-    // app.get('/api/property/:id', async(req, res) => {
-    //   const id = req.params;
-
-    //   const result = await propertiesCollection.findOne(id);
-    //   res.send(result);
-    // })
-
     app.get("/api/property/:id", async (req, res) => {
       try {
         const { id } = req.params;
@@ -129,12 +154,6 @@ async function run() {
       const result = await propertiesCollection.insertOne(property);
       res.send(result);
     });
-
-    // app.post("/api/add/favorites", async (req, res) => {
-    //   const favorite = req.body;
-    //   const result = await favoritesCollection.insertOne(favorite);
-    //   res.send(result);
-    // });
 
     app.get("/api/favorites/check", async (req, res) => {
       const { tenantUserId, propertyId } = req.query;
@@ -177,6 +196,8 @@ async function run() {
       const result = await bookingDetailsCollection.insertOne(bookingDetails);
       res.send(result);
     });
+
+   
 
     // Express server এ এই route যোগ করুন
     app.delete("/api/favorites/remove", async (req, res) => {
