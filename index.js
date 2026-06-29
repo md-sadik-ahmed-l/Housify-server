@@ -10,6 +10,7 @@ app.use(express.json());
 
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
+
 app.get("/", (req, res) => {
   res.send("Nexa server!");
 });
@@ -109,6 +110,34 @@ async function run() {
         res.send({
           success: true,
           message: "Property rejected",
+        });
+      } catch (err) {
+        res.status(500).send({
+          success: false,
+          message: err.message,
+        });
+      }
+    });
+
+
+    app.delete("/api/admin/bookings/:id/delete", async (req, res) => {
+      try {
+        const { id } = req.params;
+
+        const result = await bookingDetailsCollection.deleteOne({
+          _id: new ObjectId(id),
+        });
+
+        if (!result.deletedCount) {
+          return res.status(404).send({
+            success: false,
+            message: "Property not found",
+          });
+        }
+
+        res.send({
+          success: true,
+          message: "Property deleted successfully",
         });
       } catch (err) {
         res.status(500).send({
