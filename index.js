@@ -36,6 +36,112 @@ async function run() {
     const favoritesCollection = database.collection("favorites");
     const usersCollection = database.collection("user");
 
+    // admin api
+    // admin api
+    // admin api
+
+    app.get("/api/admin/post-request/properties", async (req, res) => {
+      const result = await propertiesCollection.find().toArray();
+      res.send(result);
+    });
+
+    // all bookings api
+
+    
+
+    app.patch("/api/admin/post-request/:id/approve", async (req, res) => {
+      try {
+        const { id } = req.params;
+
+        const result = await propertiesCollection.updateOne(
+          { _id: new ObjectId(id) },
+          {
+            $set: {
+              adminStatus: "approved",
+            },
+          },
+        );
+
+        if (!result.matchedCount) {
+          return res.status(404).send({
+            success: false,
+            message: "Property not found",
+          });
+        }
+
+        res.send({
+          success: true,
+          message: "Property approved successfully",
+        });
+      } catch (err) {
+        res.status(500).send({
+          success: false,
+          message: err.message,
+        });
+      }
+    });
+
+    app.patch("/api/admin/post-request/:id/reject", async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { feedback } = req.body;
+
+        const result = await propertiesCollection.updateOne(
+          { _id: new ObjectId(id) },
+          {
+            $set: {
+              adminStatus: "rejected",
+              rejectionFeedback: feedback || "",
+            },
+          },
+        );
+
+        if (!result.matchedCount) {
+          return res.status(404).send({
+            success: false,
+            message: "Property not found",
+          });
+        }
+
+        res.send({
+          success: true,
+          message: "Property rejected",
+        });
+      } catch (err) {
+        res.status(500).send({
+          success: false,
+          message: err.message,
+        });
+      }
+    });
+
+    app.delete("/api/admin/post-request/:id/delete", async (req, res) => {
+      try {
+        const { id } = req.params;
+
+        const result = await propertiesCollection.deleteOne({
+          _id: new ObjectId(id),
+        });
+
+        if (!result.deletedCount) {
+          return res.status(404).send({
+            success: false,
+            message: "Property not found",
+          });
+        }
+
+        res.send({
+          success: true,
+          message: "Property deleted successfully",
+        });
+      } catch (err) {
+        res.status(500).send({
+          success: false,
+          message: err.message,
+        });
+      }
+    });
+
     app.get("/api/properties", async (req, res) => {
       const { userId } = req.query;
 
@@ -437,136 +543,6 @@ async function run() {
         res.status(500).json({
           success: false,
           message: error.message,
-        });
-      }
-    });
-
-    app.get("/properties", async (req, res) => {
-      try {
-        const properties = await propertiesCollection
-          .find({})
-          .sort({ createdAt: -1 })
-          .toArray();
-
-        res.status(200).send(properties);
-      } catch (error) {
-        console.error(error);
-
-        res.status(500).send({
-          success: false,
-          message: "Failed to fetch properties",
-        });
-      }
-    });
-
-    // ==========================================
-    // Approve Property
-    // PATCH /api/admin/properties/:id/approve
-    // ==========================================
-    app.patch("/properties/:id/approve", async (req, res) => {
-      try {
-        const { id } = req.params;
-
-        const result = await propertiesCollection.updateOne(
-          { _id: new ObjectId(id) },
-          {
-            $set: {
-              status: "Approved",
-              rejectionFeedback: "",
-            },
-          },
-        );
-
-        res.send(result);
-      } catch (error) {
-        console.error(error);
-
-        res.status(500).send({
-          success: false,
-          message: "Failed to approve property",
-        });
-      }
-    });
-
-    // ==========================================
-    // Reject Property
-    // PATCH /api/admin/properties/:id/reject
-    // ==========================================
-    app.patch("/properties/:id/reject", async (req, res) => {
-      try {
-        const { id } = req.params;
-        const { rejectionFeedback } = req.body;
-
-        const result = await propertiesCollection.updateOne(
-          { _id: new ObjectId(id) },
-          {
-            $set: {
-              status: "Rejected",
-              rejectionFeedback,
-            },
-          },
-        );
-
-        res.send(result);
-      } catch (error) {
-        console.error(error);
-
-        res.status(500).send({
-          success: false,
-          message: "Failed to reject property",
-        });
-      }
-    });
-
-    // ==========================================
-    // Update Property
-    // PUT /api/admin/properties/:id
-    // ==========================================
-    app.put("/admin/properties/:id", async (req, res) => {
-      try {
-        const { id } = req.params;
-
-        const updatedData = req.body;
-
-        delete updatedData._id;
-
-        const result = await propertiesCollection.updateOne(
-          { _id: new ObjectId(id) },
-          {
-            $set: updatedData,
-          },
-        );
-
-        res.send(result);
-      } catch (error) {
-        console.error(error);
-
-        res.status(500).send({
-          success: false,
-          message: "Failed to update property",
-        });
-      }
-    });
-
-    // ==========================================
-    // Delete Property
-    // DELETE /api/admin/properties/:id
-    // ==========================================
-    app.delete("/properties/:id", async (req, res) => {
-      try {
-        const { id } = req.params;
-
-        const result = await propertiesCollection.deleteOne({
-          _id: new ObjectId(id),
-        });
-
-        res.send(result);
-      } catch (error) {
-        console.error(error);
-
-        res.status(500).send({
-          success: false,
-          message: "Failed to delete property",
         });
       }
     });
