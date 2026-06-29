@@ -47,7 +47,10 @@ async function run() {
 
     // all bookings api
 
-    
+    app.get("/api/admin/bookings/properties", async (req, res) => {
+      const result = await bookingDetailsCollection.find().toArray();
+      res.send(result);
+    });
 
     app.patch("/api/admin/post-request/:id/approve", async (req, res) => {
       try {
